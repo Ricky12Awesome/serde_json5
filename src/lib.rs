@@ -20,25 +20,41 @@ mod tests {
   use crate::ser::Json5Serializer;
   use crate::ser::Json5Error;
 
-  fn test<T: Serialize>(data: T) {
+  fn test<T: Serialize, S: ToString>(data: T, expect: S) {
     let mut serializer = Json5Serializer::default();
     let mut serialized = data.serialize(&mut serializer);
 
     // TODO: Json5Error only has Custom
     if let Err(Json5Error::Custom(err)) = serialized {
       eprintln!("{}", err);
+      return;
     }
 
-    println!("{:?}", serializer);
+    println!("{:?}", serializer.output);
+    assert_eq!(serializer.output, expect.to_string());
   }
 
   #[test]
-  fn it_works() {
-    test(true);
-    test(123i8);
-    test(123);
-    test("epirhge");
-    test(vec![1, 2, 3]);
+  fn test_primitives() {
+    test(true, "true");
+    test(false, "false");
+    test(-127i8, "-127");
+    test(255u8, "255");
+    test(-255i16, "-255");
+    test(255u16, "255");
+    test(-255i32, "-255");
+    test(255u32, "255");
+    test(-255i64, "-255");
+    test(255u64, "255");
+    test(-255i128, "-255");
+    test(255u128, "255");
+    test(255.255f32, "255.255");
+    test(255.255f64, "255.255");
+  }
+
+  #[test]
+  fn test_vec() {
+    test(vec![1, 2, 3], "[1, 2, 3]"); // Not Implemented
   }
 }
 
@@ -105,51 +121,65 @@ pub mod ser {
     }
 
     fn serialize_i8(self, v: i8) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_i16(self, v: i16) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_i32(self, v: i32) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_i64(self, v: i64) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
+    }
+
+    serde::serde_if_integer128! {
+      fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
+        self.append(v)
+      }
     }
 
     fn serialize_u8(self, v: u8) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_u16(self, v: u16) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_u32(self, v: u32) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_u64(self, v: u64) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
+    }
+
+    serde::serde_if_integer128! {
+      fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
+        self.append(v)
+      }
     }
 
     fn serialize_f32(self, v: f32) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_f64(self, v: f64) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_char(self, v: char) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append(v)
     }
 
     fn serialize_str(self, v: &str) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append('"')?;
+      self.append(v)?;
+      self.append('"')
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Json5Result<()> {
@@ -159,11 +189,11 @@ pub mod ser {
 
     //region Non-Primitives
     fn serialize_none(self) -> Json5Result<()> {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      self.append("null")
     }
 
     fn serialize_some<T: ?Sized>(self, value: &T) -> Json5Result<()> where T: Serialize {
-      Err(Error::custom(format!("{f}:{l} - {name} is not implemented", name = __func__!(), f = file!(), l = line!())))
+      value.serialize(self)
     }
 
     fn serialize_unit(self) -> Json5Result<()> {
