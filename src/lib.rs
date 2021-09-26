@@ -54,7 +54,7 @@ mod tests {
 
   #[test]
   fn test_vec() {
-    test(vec![1, 2, 3], "[1, 2, 3]"); // Not Implemented
+    test(vec![1, 2, 3], "[1, 2, 3]");
   }
 }
 
